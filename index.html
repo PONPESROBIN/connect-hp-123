@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PhoneLink – phone to PC, direct</title>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f5f2;--surf:#fff;--ink:#14201b;--mute:#5d6b64;--line:#cfd8d2;--acc:#0a6e6e;--onacc:#fff;--bad:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1514;--surf:#172120;--ink:#e6eeea;--mute:#92a39a;--line:#2b3a36;--acc:#3fd0b0;--onacc:#06201a;--bad:#ff8a80}}
+:root[data-theme="dark"]{--bg:#0f1514;--surf:#172120;--ink:#e6eeea;--mute:#92a39a;--line:#2b3a36;--acc:#3fd0b0;--onacc:#06201a;--bad:#ff8a80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:8px 0 4px}
+p{margin:0 0 12px;color:var(--mute)}
+.link{display:flex;align-items:center;gap:0;margin:20px 0 8px}
+.dev{flex:none;width:64px;text-align:center;font-size:13px;color:var(--mute)}
+.dev svg{width:34px;height:34px;stroke:var(--ink);fill:none;stroke-width:1.6;display:block;margin:0 auto 4px}
+.wire{flex:1;height:0;border-top:3px dashed var(--line);position:relative;transition:border-color .3s}
+.wire::after{content:"";position:absolute;top:-8px;left:0;width:13px;height:13px;border-radius:50%;background:var(--line)}
+.on .wire{border-top:3px solid var(--acc)}
+.on .wire::after{background:var(--acc);animation:go 1.6s ease-in-out infinite alternate}
+@keyframes go{to{left:calc(100% - 13px)}}
+@media (prefers-reduced-motion:reduce){.on .wire::after{animation:none;left:calc(50% - 6px)}}
+#status{font-weight:600;margin-bottom:16px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{font-size:17px;margin:0 0 8px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{font:600 15px inherit;font-family:inherit;border:1px solid var(--acc);background:var(--acc);color:var(--onacc);padding:10px 16px;border-radius:8px;cursor:pointer;min-height:44px}
+button.alt,.btn.alt{background:transparent;color:var(--acc)}
+button:focus-visible,textarea:focus-visible,input:focus-visible,.btn:focus-within{outline:3px solid var(--acc);outline-offset:2px}
+textarea,input[type=text]{width:100%;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;resize:vertical}
+textarea{min-height:90px;word-break:break-all}
+input[type=text]{font:16px inherit;font-family:inherit}
+.step{font-size:14px;color:var(--mute);margin:10px 0 0}
+#log{max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.m{padding:8px 12px;border-radius:10px;max-width:88%;word-break:break-word;border:1px solid var(--line);background:var(--bg)}
+.m.me{align-self:flex-end;background:var(--acc);color:var(--onacc);border-color:var(--acc)}
+.m a{color:inherit;font-weight:600}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--acc)}
+#drop.over{outline:2px dashed var(--acc)}
+.hide{display:none}
+.err{color:var(--bad)}
+small{color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+<h1>PhoneLink</h1>
+<p>Send text and files between your phone and PC, directly over Wi‑Fi. Nothing is uploaded to a server and there is no account.</p>
+
+<div class="link" id="link">
+  <div class="dev"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>PC</div>
+  <div class="wire"></div>
+  <div class="dev"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18.5h2"/></svg>Phone</div>
+</div>
+<div id="status">Not connected</div>
+
+<section id="pair">
+  <div class="card" id="choose">
+    <h2>Connect two devices</h2>
+    <p>Open this page on both devices (same Wi‑Fi). On the first, start. On the second, join.</p>
+    <div class="row"><button id="bHost">Start here</button><button id="bJoin" class="alt">Join with a code</button></div>
+  </div>
+
+  <div class="card hide" id="host">
+    <h2>Start here</h2>
+    <p class="step">1. Copy this code and send it to the other device (any chat app, email, or note to self).</p>
+    <textarea id="offer" readonly aria-label="Your code"></textarea>
+    <div class="row"><button id="cpOffer">Copy code</button></div>
+    <p class="step">2. Paste the reply code you get back, then connect.</p>
+    <textarea id="answerIn" placeholder="Paste reply code" aria-label="Reply code"></textarea>
+    <div class="row"><button id="bConnect">Connect</button></div>
+  </div>
+
+  <div class="card hide" id="join">
+    <h2>Join with a code</h2>
+    <p class="step">1. Paste the code from the first device.</p>
+    <textarea id="offerIn" placeholder="Paste code" aria-label="Code from other device"></textarea>
+    <div class="row"><button id="bAnswer">Make reply code</button></div>
+    <div id="ansBox" class="hide">
+      <p class="step">2. Copy this reply code and send it back. The link opens as soon as the first device connects it.</p>
+      <textarea id="answer" readonly aria-label="Your reply code"></textarea>
+      <div class="row"><button id="cpAnswer">Copy reply code</button></div>
+    </div>
+  </div>
+  <p id="err" class="err" role="alert"></p>
+</section>
+
+<section id="app" class="hide">
+  <div class="card">
+    <h2>Messages</h2>
+    <div id="log" aria-live="polite"></div>
+    <div class="row" style="flex-wrap:nowrap">
+      <input type="text" id="msg" placeholder="Type or paste text" aria-label="Message" enterkeyhint="send">
+      <button id="bSend">Send</button>
+    </div>
+  </div>
+  <div class="card" id="drop">
+    <h2>Files</h2>
+    <p>Pick files or drop them here. They go straight to the other device.</p>
+    <label class="btn alt" style="display:inline-block">Choose files<input type="file" id="file" multiple class="hide"></label>
+    <div id="xfers"></div>
+  </div>
+  <div class="row"><button class="alt" id="bEnd">Disconnect</button></div>
+</section>
+
+<p><small>Tip: if pairing fails, switch both devices to the same Wi‑Fi (not a guest network) and try again.</small></p>
+</main>
+
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var pc,dc,CH=16384,rx=null;
+var cfg={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
+
+function show(id,on){$(id).classList.toggle("hide",!on)}
+function setStatus(t,ok){$("status").textContent=t;$("link").classList.toggle("on",!!ok)}
+function err(t){$("err").textContent=t||""}
+function enc(d){return btoa(unescape(encodeURIComponent(JSON.stringify(d))))}
+function dec(s){return JSON.parse(decodeURIComponent(escape(atob(s.replace(/\s+/g,"")))))}
+
+function newPC(){
+  pc=new RTCPeerConnection(cfg);
+  pc.onconnectionstatechange=function(){
+    var s=pc.connectionState;
+    if(s==="connected")setStatus("Connected, direct link",true);
+    else if(s==="failed"||s==="disconnected"||s==="closed"){setStatus("Disconnected",false);if(s==="failed")err("Could not connect. Check both devices are on the same Wi‑Fi and try again.")}
+  };
+}
+function gathered(){
+  return new Promise(function(res){
+    if(pc.iceGatheringState==="complete")return res();
+    var t=setTimeout(res,3000);
+    pc.onicegatheringstatechange=function(){if(pc.iceGatheringState==="complete"){clearTimeout(t);res()}};
+  });
+}
+function wire(ch){
+  dc=ch;dc.binaryType="arraybuffer";dc.bufferedAmountLowThreshold=CH*8;
+  dc.onopen=function(){show("pair",false);show("app",true);setStatus("Connected, direct link",true);add("Linked. Send text or files.","")};
+  dc.onclose=function(){setStatus("Disconnected",false)};
+  dc.onmessage=onData;
+}
+
+$("bHost").onclick=function(){show("choose",false);show("host",true);startHost()};
+$("bJoin").onclick=function(){show("choose",false);show("join",true)};
+
+async function startHost(){
+  try{
+    newPC();wire(pc.createDataChannel("link",{ordered:true}));
+    await pc.setLocalDescription(await pc.createOffer());
+    await gathered();
+    $("offer").value=enc(pc.localDescription);
+  }catch(e){err("Could not start: "+e.message)}
+}
+$("bConnect").onclick=async function(){
+  err("");
+  try{await pc.setRemoteDescription(dec($("answerIn").value));setStatus("Connecting…",false)}
+  catch(e){err("That reply code is not valid. Copy it again in full.")}
+};
+$("bAnswer").onclick=async function(){
+  err("");
+  try{
+    var off=dec($("offerIn").value);
+    newPC();pc.ondatachannel=function(e){wire(e.channel)};
+    await pc.setRemoteDescription(off);
+    await pc.setLocalDescription(await pc.createAnswer());
+    setStatus("Preparing reply…",false);
+    await gathered();
+    $("answer").value=enc(pc.localDescription);show("ansBox",true);setStatus("Waiting for the first device…",false);
+  }catch(e){err("That code is not valid. Copy it again in full.")}
+};
+function copy(id,btn){
+  var el=$(id);el.select();
+  (navigator.clipboard?navigator.clipboard.writeText(el.value):Promise.reject()).catch(function(){document.execCommand("copy")});
+  var o=btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=o},1400);
+}
+$("cpOffer").onclick=function(){copy("offer",this)};
+$("cpAnswer").onclick=function(){copy("answer",this)};
+
+function add(text,who,node){
+  var d=document.createElement("div");d.className="m"+(who==="me"?" me":"");
+  if(node)d.appendChild(node);else d.textContent=text;
+  $("log").appendChild(d);$("log").scrollTop=1e9;return d;
+}
+function send(){
+  var v=$("msg").value;if(!v||!dc||dc.readyState!=="open")return;
+  dc.send(JSON.stringify({t:"txt",v:v}));add(v,"me");$("msg").value="";
+}
+$("bSend").onclick=send;
+$("msg").onkeydown=function(e){if(e.key==="Enter")send()};
+
+function xfer(name){
+  var box=document.createElement("div");box.style.marginTop="10px";
+  var l=document.createElement("div");l.textContent=name;
+  var b=document.createElement("div");b.className="bar";var i=document.createElement("i");b.appendChild(i);
+  box.appendChild(l);box.appendChild(b);$("xfers").appendChild(box);
+  return {set:function(p){i.style.width=(p*100)+"%"},label:l,box:box};
+}
+async function sendFile(f){
+  var ui=xfer("Sending "+f.name);
+  dc.send(JSON.stringify({t:"file",name:f.name,size:f.size,type:f.type}));
+  var off=0;
+  while(off<f.size){
+    if(dc.bufferedAmount>CH*16){await new Promise(function(r){dc.onbufferedamountlow=function(){dc.onbufferedamountlow=null;r()}})}
+    var buf=await f.slice(off,off+CH).arrayBuffer();
+    dc.send(buf);off+=buf.byteLength;ui.set(off/f.size);
+  }
+  dc.send(JSON.stringify({t:"end"}));ui.label.textContent="Sent "+f.name;
+}
+async function sendAll(list){
+  if(!dc||dc.readyState!=="open")return;
+  for(var k=0;k<list.length;k++)await sendFile(list[k]);
+}
+$("file").onchange=function(){sendAll(this.files);this.value=""};
+var drop=$("drop");
+["dragover","dragenter"].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();drop.classList.add("over")})});
+["dragleave","drop"].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();drop.classList.remove("over")})});
+drop.addEventListener("drop",function(e){sendAll(e.dataTransfer.files)});
+
+function onData(e){
+  if(typeof e.data==="string"){
+    var m=JSON.parse(e.data);
+    if(m.t==="txt")add(m.v,"them");
+    else if(m.t==="file"){rx={meta:m,parts:[],got:0,ui:xfer("Receiving "+m.name)}}
+    else if(m.t==="end"&&rx){
+      var url=URL.createObjectURL(new Blob(rx.parts,{type:rx.meta.type||"application/octet-stream"}));
+      var a=document.createElement("a");a.href=url;a.download=rx.meta.name;a.textContent="Save "+rx.meta.name;
+      rx.ui.label.textContent="";rx.ui.label.appendChild(a);rx.ui.set(1);rx=null;
+    }
+  }else if(rx){rx.parts.push(e.data);rx.got+=e.data.byteLength;rx.ui.set(rx.got/rx.meta.size)}
+}
+$("bEnd").onclick=function(){if(dc)dc.close();if(pc)pc.close();location.reload()};
+})();
+</script>
+</body>
+</html>
